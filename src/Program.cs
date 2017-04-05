@@ -7,6 +7,7 @@ namespace WorldDominationCrawler
     {
         static void Main(string[] args)
         {
+            Console.WriteLine("v0.3");
             CommandLineApplication cliApp = new CommandLineApplication();
             cliApp.Name = "WorldDominationCrawler";
 
@@ -39,14 +40,14 @@ namespace WorldDominationCrawler
                     return 1;
                 }
 
-
-                CrawlPipeline.Start(urlArgument.Value, fetchWorkers, parseWorkers).Wait();
+                var task = CrawlPipeline.RunAsync(urlArgument.Value, fetchWorkers, parseWorkers);
+                System.IO.File.AppendAllText("data.json", task.Result.ToJson());
                 return 0;
             });
-            
+            cliApp.Execute(args);
             try
             {
-                cliApp.Execute(args);
+                
             }
             catch
             {

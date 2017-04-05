@@ -1,3 +1,5 @@
+using JobKey = System.Tuple<int, string>;
+
 namespace WorldDominationCrawler
 {
     internal class CrawlJob
@@ -12,5 +14,10 @@ namespace WorldDominationCrawler
         public string Html { get; set; }
         public string PageTitle { get; set; }
         public string[] PageHrefs { get; set; }
+
+        public JobKey GetJobKey()
+        {
+            return new JobKey(this.Depth, this.Url);
+        }
     }
 }
