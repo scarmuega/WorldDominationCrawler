@@ -1,15 +1,18 @@
 # WorldDominationCrawler
 A c# web crawler using "Dataflow" pipelines
 
-# Requirements
+# Setup (stand-alone)
 - .NET Core 1.1 [https://www.microsoft.com/net/core]
-- wdcrawler.dll binary [osx](http://line64.github.io/WorldDominationCrawler/osx.10.12-x64.zip)
-- wdcrawler.dll binary [ubuntu](http://line64.github.io/WorldDominationCrawler/ubuntu.14.10-x64.zip)
-- wdcrawler.dll binary [win10](http://line64.github.io/WorldDominationCrawler/win10-x64.zip)
+- wdcrawler binaries [osx](http://line64.github.io/WorldDominationCrawler/osx.10.12-x64.zip)
+- wdcrawler binaries [ubuntu](http://line64.github.io/WorldDominationCrawler/ubuntu.14.10-x64.zip)
+- wdcrawler binaries [win10](http://line64.github.io/WorldDominationCrawler/win10-x64.zip)
+- Extract .zip file and navigate to the extracted files from your terminal.
+
+# Setup (via Docker)
+- docker engine
+- `docker pull scarmuega/wdcrawler:latest`
 
 # CLI Usage
-
-Extract .zip file and navigate to the extracted files from your terminal.
 
 ```
 Usage: dotnet wdcrawler.dll [url] [options]
@@ -33,6 +36,10 @@ Once the crawling process finished, the report will be uploaded to S3 and you'll
 crawl "World Domination" topic on wikipedia 
 ```
 dotnet wdcrawler.dll https://en.wikipedia.org/wiki/World_domination
+```
+same as above but using Docker 
+```
+docker run -it scarmuega/wdcrawler https://en.wikipedia.org/wiki/World_domination
 ```
 use 4 fetch workers and 2 parse workers
 ```

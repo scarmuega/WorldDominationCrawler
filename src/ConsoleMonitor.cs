@@ -23,7 +23,7 @@ namespace WorldDominationCrawler
             Console.ForegroundColor = ConsoleColor.Gray;
             Console.WriteLine("Current: (depth: {0:D2}) {1}", currentJob.Depth, currentJob.Url.Truncate(55), currentJob.PageHrefs.Count());
             Console.ResetColor();
-            _InitialCursorTop = Console.CursorTop - 4;
+            _InitialCursorTop = Math.Max(Console.CursorTop - 4, 0);
         }
     }
 }
