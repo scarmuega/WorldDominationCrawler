@@ -3,9 +3,13 @@ A c# web crawler using "Dataflow" pipelines
 
 # Requirements
 - .NET Core 1.1 [https://www.microsoft.com/net/core]
-- wdcrawler.dll binary [http://bit.ly/2nOyZAn]
+- wdcrawler.dll binary [osx](http://line64.github.io/WorldDominationCrawler/osx.10.12-x64.zip)
+- wdcrawler.dll binary [ubuntu](http://line64.github.io/WorldDominationCrawler/ubuntu.14.10-x64.zip)
+- wdcrawler.dll binary [win10](http://line64.github.io/WorldDominationCrawler/win10-x64.zip)
 
 # CLI Usage
+
+Extract .zip file and navigate to the extracted files from your terminal.
 
 ```
 Usage: dotnet wdcrawler.dll [url] [options]

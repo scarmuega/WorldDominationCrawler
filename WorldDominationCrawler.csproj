@@ -3,6 +3,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp1.1</TargetFramework>
     <AssemblyName>wdcrawler</AssemblyName>
+    <RuntimeIdentifiers>osx.10.12-x64;win10-x64;ubuntu.14.10-x64;</RuntimeIdentifiers>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="AWSSDK.S3" Version="3.3.5.11" />
