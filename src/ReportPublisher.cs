@@ -10,7 +10,7 @@ namespace WorldDominationCrawler
     internal static class ReportPublisher
     {
 
-        private const string PUBLIC_URL_FORMAT = "https://s3.amazonaws.com/world-crawler/report?guid={0}";
+        private const string PUBLIC_URL_FORMAT = "https://line64.github.io/WorldDominationCrawler/report?guid={0}";
 
         public static async Task<Guid> UploadToS3Async(ReportData data)
         {
