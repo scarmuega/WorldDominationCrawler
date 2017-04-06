@@ -41,5 +41,10 @@ namespace WorldDominationCrawler
             var tree = this._BuildJobToTree(_RootJob);
             return JsonConvert.SerializeObject(tree, Formatting.Indented);
         }
+
+        public void Reset()
+        {
+            _Jobs.Clear();
+        }
     }
 }

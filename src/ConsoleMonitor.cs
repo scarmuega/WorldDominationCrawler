@@ -12,13 +12,18 @@ namespace WorldDominationCrawler
             _InitialCursorTop = Console.CursorTop;
         }
 
-        public static void PrintStatus(int fetchCount, int fetchPending, int parseCount, int parsePending, CrawlJob currentJob)
+        public static void PrintStatus(CrawlStats stats, CrawlJob currentJob)
         {
             Console.SetCursorPosition(0, _InitialCursorTop);
-            Console.WriteLine("fetched {0} (waiting {1})", fetchCount, fetchPending);
-            Console.WriteLine("parsed {0} (waiting {1})", parseCount, parsePending);
-            Console.WriteLine("processing {0} {1} {2}", currentJob.Depth, currentJob.Url, currentJob.PageHrefs.Count());
-            _InitialCursorTop = Console.CursorTop - 3;
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("Fetched:\t{0:D4}\t(waiting {1:D4})", stats.FetchCount, stats.FetchPending);
+            Console.WriteLine("Parsed:\t\t{0:D4}\t(waiting {1:D4})", stats.ParseCount, stats.ParsePending);
+            Console.ForegroundColor = ConsoleColor.DarkRed;
+            Console.WriteLine("Faulted:\t{0:D4}", stats.ErrorCount);
+            Console.ForegroundColor = ConsoleColor.Gray;
+            Console.WriteLine("Current: (depth: {0:D2}) {1}", currentJob.Depth, currentJob.Url.Truncate(55), currentJob.PageHrefs.Count());
+            Console.ResetColor();
+            _InitialCursorTop = Console.CursorTop - 4;
         }
     }
 }

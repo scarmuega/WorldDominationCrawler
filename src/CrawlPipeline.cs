@@ -1,67 +1,131 @@
 using System;
 using System.Linq;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
+using TransformBlock = System.Threading.Tasks.Dataflow.TransformBlock<WorldDominationCrawler.CrawlJob, WorldDominationCrawler.CrawlJob>;
+using TransformManyBlock = System.Threading.Tasks.Dataflow.TransformManyBlock<WorldDominationCrawler.CrawlJob, WorldDominationCrawler.CrawlJob>;
 
 namespace WorldDominationCrawler
 {
-    internal static class CrawlPipeline
+    internal class CrawlPipeline
     {
-        private const int MAX_DEPTH = 2;
-        private const int MAX_ITEMS_PER_NODE = 5;
+        private const int DEFAULT_FETCH_WORKERS = 8;
+        private const int DEFAULT_PARSE_WORKERS = 2;
+        private const int DEFAULT_PARSE_DELAY = 200;
+        private const int DEFAULT_MAX_DEPTH = 3;
+        private const int DEFAULT_MAX_LINKS_PER_NODE = 10;
 
-        public static async Task<ReportData> RunAsync(string rootUrl, int fetchWorkers, int parseWorkers)
+        private CrawlJob _RootJob;
+        private CrawlStats _Stats;
+        private ReportData _Report;
+
+        public CrawlPipeline(string url)
         {
-            var rootJob = new CrawlJob(rootUrl, 0);
-            var report = new ReportData(rootJob);
-            int fetchCount = 0, parseCount = 0;
+            _RootJob = new CrawlJob(url, 0);
+            _Report = new ReportData(_RootJob);
+            _Stats = new CrawlStats();
+        }
 
-            var fetchHtmlBlock = new TransformBlock<CrawlJob, CrawlJob>((job) => {
-                job.Html = HtmlFetcher.GetHtml(job.Url);
-                fetchCount += 1;
-                return job;
-            }, new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = fetchWorkers });
+        public CrawlStats Stats
+        {
+            get { return _Stats; }
+        }
 
-            var parseHtmlBlock = new TransformBlock<CrawlJob, CrawlJob>((job) => {
+        public ReportData Report
+        {
+            get { return _Report; }
+        }
+
+        private async Task<CrawlJob> _FetchHtmlStep(CrawlJob job)
+        {
+            try
+            {
+                job.Html = await HtmlFetcher.GetHtml(job.Url);
+                _Stats.FetchCount += 1;
+            }
+            catch (Exception ex)
+            {
+                job.Exception = ex;
+                _Stats.ErrorCount += 1;
+            }
+            
+            return job;
+        }
+
+        private CrawlJob _ParseHtmlStep(CrawlJob job, CrawlOptions options)
+        {
+            try
+            {
                 job.PageTitle = HtmlParser.GetTitle(job.Html);
                 job.PageHrefs = HtmlParser.GetHrefs(job.Url, job.Html); 
-                parseCount += 1;
-                return job;
-            }, new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = parseWorkers });
+                _Stats.ParseCount += 1;
+            }
+            catch (Exception ex)
+            {
+                job.Exception = ex;
+                _Stats.ErrorCount += 1;
+            }
 
-            var monitorStatusBlock = new TransformBlock<CrawlJob, CrawlJob>((job) => {
-                ConsoleMonitor.PrintStatus(fetchCount, fetchHtmlBlock.InputCount, parseCount, parseHtmlBlock.InputCount, job);
-                return job;
-            });
+            //delay a little bit, just to make stats interesting
+            System.Threading.Thread.Sleep(options.ParseDelay.GetValueOrDefault(DEFAULT_PARSE_DELAY));
 
-            var addToReportBlock = new TransformBlock<CrawlJob, CrawlJob>((job) => {
-                report.TrackJob(job);
-                return job;
-            });
+            return job;
+        }
 
-            var spawnNewJobsBlock = new TransformManyBlock<CrawlJob, CrawlJob>((parentJob) => {
-                return parentJob
+        private CrawlJob _ReportJobStep(CrawlJob job, TransformBlock fetchBlock, TransformBlock parseBlock)
+        {
+            _Report.TrackJob(job);
+            
+            _Stats.FetchPending = fetchBlock.InputCount;
+            _Stats.ParsePending = parseBlock.InputCount;
+            ConsoleMonitor.PrintStatus(_Stats, job);
+
+            return job;
+        }
+
+        private IEnumerable<CrawlJob> _SpanNewJobsStep(CrawlJob parentJob, TransformBlock fetchBlock, CrawlOptions options)
+        {
+            var newJobs = parentJob
                     .PageHrefs
                     .Select((href) => new CrawlJob(href, parentJob.Depth+1))
-                    .Take(MAX_ITEMS_PER_NODE);
-            });
+                    .Take(options.MaxLinksPerNode.GetValueOrDefault(DEFAULT_MAX_LINKS_PER_NODE));
 
-            var requeueJobs = new ActionBlock<CrawlJob>((newJob) => {
-                if (newJob.Depth <= MAX_DEPTH) fetchHtmlBlock.Post(newJob);
-                if (fetchHtmlBlock.InputCount == 0 && parseHtmlBlock.InputCount == 0) fetchHtmlBlock.Complete();
-            });
+            if (parentJob.Depth == 0 && newJobs.Count() == 0)
+            {
+                fetchBlock.Complete();
+            }
+
+            return newJobs;
+        }
+
+        private void _RequeueJobStep(CrawlJob newJob, TransformBlock fetchBlock, TransformBlock parseBlock, CrawlOptions options)
+        {
+            if (newJob.Depth <= options.MaxDepth.GetValueOrDefault(DEFAULT_MAX_DEPTH)) fetchBlock.Post(newJob);
+            if (fetchBlock.InputCount == 0 && parseBlock.InputCount == 0) fetchBlock.Complete();
+        }
+
+        public async Task<ReportData> RunAsync(CrawlOptions options)
+        {
+            _Stats.Reset();
+            _Report.Reset();
+
+            var fetchHtmlBlock = new TransformBlock((job) => _FetchHtmlStep(job), new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = options.FetchWorkers.GetValueOrDefault(DEFAULT_FETCH_WORKERS) });
+            var parseHtmlBlock = new TransformBlock((job) => _ParseHtmlStep(job, options), new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = options.ParseWorkers.GetValueOrDefault(DEFAULT_PARSE_WORKERS) });
+            var reportJobBlock = new TransformBlock((job) => _ReportJobStep(job, fetchHtmlBlock, parseHtmlBlock));
+            var spawnNewJobsBlock = new TransformManyBlock((job) => _SpanNewJobsStep(job, fetchHtmlBlock, options));
+            var requeueJobs = new ActionBlock<CrawlJob>((job) => _RequeueJobStep(job, fetchHtmlBlock, parseHtmlBlock, options));
 
             fetchHtmlBlock.LinkTo(parseHtmlBlock, new DataflowLinkOptions { PropagateCompletion = true });
-            parseHtmlBlock.LinkTo(monitorStatusBlock, new DataflowLinkOptions { PropagateCompletion = true });
-            monitorStatusBlock.LinkTo(addToReportBlock, new DataflowLinkOptions { PropagateCompletion = true });
-            addToReportBlock.LinkTo(spawnNewJobsBlock, new DataflowLinkOptions { PropagateCompletion = true });
+            parseHtmlBlock.LinkTo(reportJobBlock, new DataflowLinkOptions { PropagateCompletion = true });
+            reportJobBlock.LinkTo(spawnNewJobsBlock, new DataflowLinkOptions { PropagateCompletion = true });
             spawnNewJobsBlock.LinkTo(requeueJobs, new DataflowLinkOptions { PropagateCompletion = true });
 
-            fetchHtmlBlock.Post(rootJob);
+            fetchHtmlBlock.Post(_RootJob);
 
             await requeueJobs.Completion;
 
-            return report;
+            return _Report;
         }
     }
 }

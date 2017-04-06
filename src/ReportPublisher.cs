@@ -9,7 +9,10 @@ namespace WorldDominationCrawler
 {
     internal static class ReportPublisher
     {
-        public static async Task<Guid?> UploadToS3Async(ReportData data)
+
+        private const string PUBLIC_URL_FORMAT = "https://s3.amazonaws.com/world-crawler/report?guid={0}";
+
+        public static async Task<Guid> UploadToS3Async(ReportData data)
         {
             var reportGuid = Guid.NewGuid();
             var jsonData = data.ToJson();
@@ -40,6 +43,11 @@ namespace WorldDominationCrawler
                 
                 throw amazonS3Exception;
             }
+        }
+
+        public static string GeneratePublicUrl(Guid reportGuid)
+        {
+            return String.Format(PUBLIC_URL_FORMAT, reportGuid);
         }
     }
 }
