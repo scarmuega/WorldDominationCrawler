@@ -11,11 +11,14 @@ A c# web crawler using "Dataflow" pipelines
 # Setup (via Docker)
 - docker engine
 - `docker pull scarmuega/wdcrawler:latest`
+- (if using docker, remember to use `docker -it` flag to get a nice console output)
 
 # CLI Usage
 
 ```
-Usage: dotnet wdcrawler.dll [url] [options]
+Stand-alone usage: dotnet wdcrawler.dll [url] [options]
+via Docker usage: docker -it scarmuega/wdcrawler [url] [options]
+
 
 Arguments:
   url  The seed url to crawl
@@ -82,3 +85,4 @@ dotnet build
 - tidy up report, show more info, provide table alternative
 - memory cache to avoid re-fetch of same url
 - skip links which points back to parent
+- add a cancellation token to abort process but generating partial report
