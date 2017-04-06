@@ -7,7 +7,7 @@ namespace WorldDominationCrawler
 {
     internal static class CrawlPipeline
     {
-        private const int MAX_DEPTH = 4;
+        private const int MAX_DEPTH = 2;
         private const int MAX_ITEMS_PER_NODE = 5;
 
         public static async Task<ReportData> RunAsync(string rootUrl, int fetchWorkers, int parseWorkers)

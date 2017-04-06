@@ -1,10 +1,19 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Microsoft.Extensions.CommandLineUtils;
 
 namespace WorldDominationCrawler
 {
     class Program
     {
+        static async Task RunAsync(string url, int fetchWorkers, int parseWorkers)
+        {
+            var reportData = await CrawlPipeline.RunAsync(url, fetchWorkers, parseWorkers);
+            var reportGuid = await ReportPublisher.UploadToS3Async(reportData);
+            System.IO.File.AppendAllText("data.json", reportData.ToJson());
+            Console.WriteLine("Your report GUID is: {0}", reportGuid);
+        }
+
         static void Main(string[] args)
         {
             Console.WriteLine("v0.3");
@@ -31,8 +40,8 @@ namespace WorldDominationCrawler
 
                 try
                 {
-                    fetchWorkers = fetchWorkersOption.ParseIntOption().GetValueOrDefault(4);
-                    parseWorkers = parseWorkersOption.ParseIntOption().GetValueOrDefault(2);
+                    fetchWorkers = fetchWorkersOption.ParseIntOption().GetValueOrDefault(5);
+                    parseWorkers = parseWorkersOption.ParseIntOption().GetValueOrDefault(1);
                 }
                 catch
                 {
@@ -40,17 +49,18 @@ namespace WorldDominationCrawler
                     return 1;
                 }
 
-                var task = CrawlPipeline.RunAsync(urlArgument.Value, fetchWorkers, parseWorkers);
-                System.IO.File.AppendAllText("data.json", task.Result.ToJson());
+                var task = Program.RunAsync(url, fetchWorkers, parseWorkers);
+                task.Wait();
                 return 0;
             });
-            cliApp.Execute(args);
+            
             try
             {
-                
+                cliApp.Execute(args);
             }
-            catch
+            catch (Exception err)
             {
+                Console.WriteLine(err.Message);
                 cliApp.ShowHelp();
             }
         }
